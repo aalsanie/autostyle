@@ -54,6 +54,13 @@ class ApplyTaskTest : GradleIntegrationTest() {
         Assertions.assertEquals(expected, file.readText())
     }
 
+    /**
+     * Escapes CR and LF as the literal text `\r` and `\n`, so a line-ending mismatch stays legible
+     * in an `assertEquals` failure.
+     */
+    private fun String.escapeLineEndings() =
+        replace("\r", "\\r").replace("\n", "\\n")
+
     @Test
     fun lowercase() {
         writeBuildFile("'42'")
@@ -81,7 +88,10 @@ class ApplyTaskTest : GradleIntegrationTest() {
 
         runner.withArguments("autostyleApply").build()
 
-        Assertions.assertEquals("first\r\nsecond\r\n", source.readText())
+        Assertions.assertEquals(
+            "first\r\nsecond\r\n".escapeLineEndings(),
+            source.readText().escapeLineEndings()
+        )
 
         runner.withArguments("autostyleCheck").build()
 
@@ -91,7 +101,10 @@ class ApplyTaskTest : GradleIntegrationTest() {
         Assertions.assertFalse(formatted.exists())
 
         runner.withArguments("autostyleApply").build()
-        Assertions.assertEquals("first\r\nsecond\r\n", source.readText())
+        Assertions.assertEquals(
+            "first\r\nsecond\r\n".escapeLineEndings(),
+            source.readText().escapeLineEndings()
+        )
 
         runner.withArguments("autostyleCheck").build()
         Assertions.assertFalse(formatted.exists())
@@ -118,13 +131,18 @@ class ApplyTaskTest : GradleIntegrationTest() {
 
         runner.withArguments("autostyleApply").build()
 
-        Assertions.assertEquals("first\nsecond\n", source.readText())
+        Assertions.assertEquals(
+            "first\nsecond\n".escapeLineEndings(),
+            source.readText().escapeLineEndings()
+        )
 
         runner.withArguments("autostyleCheck").build()
     }
 
     @Test
     fun appliesGitAttributesLineEndings() {
+        // GradleIntegrationTest's @BeforeEach writes a ".gitattributes" of "* text eol=lf" into
+        // every test project; this test replaces it so *.md resolves to CRLF under the default policy.
         setFile(".gitattributes").toContent("*.md text eol=crlf\n")
 
         setFile("build.gradle").toContent(
@@ -145,7 +163,10 @@ class ApplyTaskTest : GradleIntegrationTest() {
 
         runner.withArguments("autostyleApply").build()
 
-        Assertions.assertEquals("first\r\nsecond\r\n", source.readText())
+        Assertions.assertEquals(
+            "first\r\nsecond\r\n".escapeLineEndings(),
+            source.readText().escapeLineEndings()
+        )
 
         runner.withArguments("autostyleCheck").build()
     }
