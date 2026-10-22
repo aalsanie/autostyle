@@ -61,6 +61,96 @@ class ApplyTaskTest : GradleIntegrationTest() {
     }
 
     @Test
+    fun appliesWindowsLineEndings() {
+        setFile("build.gradle").toContent(
+            """
+        plugins {
+            id 'com.github.autostyle'
+        }
+        autostyle {
+            lineEndings = com.github.autostyle.LineEnding.WINDOWS
+            format 'misc', {
+                target file('src/README.md')
+                endWithNewline()
+            }
+        }
+        """.trimIndent()
+        )
+
+        val source = setFile("src/README.md").toContent("first\nsecond\n")
+
+        runner.withArguments("autostyleApply").build()
+
+        Assertions.assertEquals("first\r\nsecond\r\n", source.readText())
+
+        runner.withArguments("autostyleCheck").build()
+
+        val formatted = newFile(
+            "build/autostyle/autostyleMiscProcess/formatted/src/README.md"
+        )
+        Assertions.assertFalse(formatted.exists())
+
+        runner.withArguments("autostyleApply").build()
+        Assertions.assertEquals("first\r\nsecond\r\n", source.readText())
+
+        runner.withArguments("autostyleCheck").build()
+        Assertions.assertFalse(formatted.exists())
+    }
+
+    @Test
+    fun appliesUnixLineEndings() {
+        setFile("build.gradle").toContent(
+            """
+        plugins {
+            id 'com.github.autostyle'
+        }
+        autostyle {
+            lineEndings = com.github.autostyle.LineEnding.UNIX
+            format 'misc', {
+                target file('src/README.md')
+                endWithNewline()
+            }
+        }
+        """.trimIndent()
+        )
+
+        val source = setFile("src/README.md").toContent("first\r\nsecond\r\n")
+
+        runner.withArguments("autostyleApply").build()
+
+        Assertions.assertEquals("first\nsecond\n", source.readText())
+
+        runner.withArguments("autostyleCheck").build()
+    }
+
+    @Test
+    fun appliesGitAttributesLineEndings() {
+        setFile(".gitattributes").toContent("*.md text eol=crlf\n")
+
+        setFile("build.gradle").toContent(
+            """
+        plugins {
+            id 'com.github.autostyle'
+        }
+        autostyle {
+            format 'misc', {
+                target file('src/README.md')
+                endWithNewline()
+            }
+        }
+        """.trimIndent()
+        )
+
+        val source = setFile("src/README.md").toContent("first\nsecond\n")
+
+        runner.withArguments("autostyleApply").build()
+
+        Assertions.assertEquals("first\r\nsecond\r\n", source.readText())
+
+        runner.withArguments("autostyleCheck").build()
+    }
+
+    @Test
     fun cycle() {
         writeBuildFile("if (str == 'A') 'B' else 'A'")
         applyTask(false, "CCC")
